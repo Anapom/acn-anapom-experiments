@@ -102,7 +102,9 @@ class Experiment:
 
         def _log_local_file(path):
             """ Write simulation, metrics and solver statistics to disk. """
-            sim.to_json(path + f'/sim.json')
+            print("start Logging")
+            with open(path + f'/sim.json', 'w') as f:
+                sim.to_json(f)
             with open(path + f'/metrics.json', 'w') as outfile:
                 json.dump(_calc_metrics(), outfile)
             with open(path + f'/solve_stats.json', 'w') as outfile:
@@ -160,8 +162,8 @@ if __name__ == "__main__":
     # event interval to simulate
     time_month = {
         'October' :[(datetime(2019,  10, 1)),(datetime(2019, 10, 2))],
-        'November':[(datetime(2019, 11, 1)),(datetime(2019, 11, 2))],
-        'December':[(datetime(2019, 12, 1)),(datetime(2019, 12, 2))],
+        # 'November':[(datetime(2019, 11, 1)),(datetime(2019, 11, 2))],
+        # 'December':[(datetime(2019, 12, 1)),(datetime(2019, 12, 2))],
     }
     
     # demand and scenarios
@@ -173,13 +175,13 @@ if __name__ == "__main__":
                     'basic_evse'            : True,
                     'offline'               : False
                 }, 
-                'userInputs': {
-                    'estimate_max_rate'     : True,
-                    'uninterrupted_charging': False,
-                    'quantized'             : False,
-                    'basic_evse'            : True,
-                    'offline'               : False
-                }        
+                # 'userInputs': {
+                #     'estimate_max_rate'     : True,
+                #     'uninterrupted_charging': False,
+                #     'quantized'             : False,
+                #     'basic_evse'            : True,
+                #     'offline'               : False
+                # }        
     }
     
     tariff_name = 'sce_tou_ev_4_march_2019'
@@ -201,15 +203,20 @@ if __name__ == "__main__":
         return scale * dc
 
     ALGS = dict()
-    Profit = [
-        ObjectiveComponent(total_energy, revenue),
-        ObjectiveComponent(tou_energy_cost),
-        ObjectiveComponent(days_remaining_scale_demand_charge, 1, {'baseline_peak': peakKw}),
-        ObjectiveComponent(quick_charge, 1e-3),
-        ObjectiveComponent(equal_share, 1e-12),
+    # Profit = [
+    #     ObjectiveComponent(total_energy, revenue),
+    #     ObjectiveComponent(tou_energy_cost),
+    #     ObjectiveComponent(days_remaining_scale_demand_charge, 1, {'baseline_peak': peakKw}),
+    #     ObjectiveComponent(quick_charge, 1e-3),
+    #     ObjectiveComponent(equal_share, 1e-12),
+    # ]
+    
+    Quick_charge = [
+        adacharge.ObjectiveComponent(adacharge.quick_charge),
+        adacharge.ObjectiveComponent(adacharge.equal_share, 1e-12)
     ]
-    ALGS['Profit'] =  AdaptiveSchedulingAlgorithm(Profit, solver='ECOS', max_recompute=1)
     
-    
+    ALGS['Quick_charge'] =  AdaptiveSchedulingAlgorithm(Quick_charge, solver='ECOS', max_recompute=1)
+     
     ex = Experiment(site=site, eventIntervals=time_month, scenarios=scenarios)
     ex.run(algs=ALGS, tariff_name=tariff_name, revenue=revenue)
